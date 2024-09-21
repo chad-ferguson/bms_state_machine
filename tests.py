@@ -194,12 +194,173 @@ def run_test3():
     time.sleep(2)
 
 def run_test4():
-    # Test 4 : deep_sleep => tests => idle => sleep => idle => sleep => discharge to storage => deep_sleep
-    # Checking idle to sleep back and forth and also checking discharge to storage by checking soc attribute
+    # Test 4 : deep_sleep => tests => idle => sleep => discharge to storage => deep_sleep
+    # Checking discharge to storage by checking soc attribute
+    print("Test 4 \n")
+    time.sleep(0.5)
+    bms4 = BMS()
 
-    return
+    print("\nThis test checks that if the button is pressed for 5 seconds, the battery is discharged to 50% SOC before being sent to deep sleep\n")
+    time.sleep(2)
+
+    print("Starting BMS Simulation...\n")
+
+    bms4.button_pressed_5_sec()  # Simulate start-up, transition to run_tests
+
+    bms4.diagnostics_pass = True  # Simulate diagnostics pass
+    bms4.enter_run_tests()  # Transition to idle if diagnostics pass
+
+    # Check that we are in the idle state
+    if (bms4.state != 'idle'):
+        print("Incorrect state: Test failed")
+        return
+    
+    bms4.enter_idle()
+    # wait to simulate time pedal is not pressed
+    time.sleep(0.5) # simulate while loop
+
+    bms4.pedal_press = True # Simulate pedal pressed
+    print("\nPedal pressed down\n")
+    time.sleep(1)
+    bms4.enter_idle()
+
+    # Check that we are in normal operation
+    if (bms4.state != 'normal_operation'):
+        print("Incorrect state: Test failed")
+        return
+    
+    # when the pedal is being pressed in normal operating state
+    cycles = 10 # Monitor for 10 cycles before letting go of the pedal
+    while bms4.state == 'normal_operation' and cycles != 0:
+        bms4.enter_normal_operation()
+        time.sleep(0.1)
+        # if there is no fault detected, assert that state is still normal operation
+        if bms4.fault_check():
+            if (bms4.state != 'fault_detected'):
+                print("Incorrect state: Test failed")
+                return
+        # if there is a fault detected, assert that state is now fault operating
+        else:
+            if (bms4.state != 'normal_operation'):
+                print("Incorrect state: Test failed")
+                return
+        cycles -= 1
+    
+    bms4.button_press = True
+    bms4.enter_normal_operation() # Simulate button press (go to sleep)
+
+    if (bms4.state != 'sleep'):
+        print("Incorrect state: Test failed")
+        return
+    
+    print("\nWe are currently in the sleep state\n")
+    time.sleep(1)
+
+    bms4.button_pressed_5_sec() # Simulate 5 second button press
+
+    if (bms4.state != 'discharge_to_storage'): # Check that we are in the discharge to storage state
+        print("Incorrect state: Test failed")
+        return
+    
+    bms4.enter_discharge_to_storage() # start draining the battery to 50% SOC
+
+    time.sleep(0.5)
+
+    if (bms4.state != 'deep_sleep'): # Check that we are in the deep sleep after discharging to 50% SOC
+        print("Incorrect state: Test failed")
+        return
+    
+    time.sleep(0.2)
+    print("\nWe are at 50% SOC and in the deep sleep state for long term storage")
+    time.sleep(0.5)
+    print("\nTest 4 Passed\n")
+
+
+
+
+
+
 
 def run_test5():
     # Test 5 : deep_sleep => tests => idle => normal => sleep (with depleted SOC) => charging => sleep
     # Checking for charging after use
-    return
+    print("Test 5 \n")
+    time.sleep(0.5)
+    bms5 = BMS()
+
+    print("\nThis test checks the charging state and makes sure it refills soc to 100%\n")
+    time.sleep(2)
+
+    print("Starting BMS Simulation...\n")
+
+    bms5.button_pressed_5_sec()  # Simulate start-up, transition to run_tests
+
+    bms5.diagnostics_pass = True  # Simulate diagnostics pass
+    bms5.enter_run_tests()  # Transition to idle if diagnostics pass
+
+    # Check that we are in the idle state
+    if (bms5.state != 'idle'):
+        print("Incorrect state: Test failed")
+        return
+    
+    bms5.enter_idle()
+    # wait to simulate time pedal is not pressed
+    time.sleep(0.5) # simulate while loop
+
+    bms5.pedal_press = True # Simulate pedal pressed
+    print("\nPedal pressed down\n")
+    time.sleep(1)
+    bms5.enter_idle()
+
+    # Check that we are in normal operation
+    if (bms5.state != 'normal_operation'):
+        print("Incorrect state: Test failed")
+        return
+    
+    # when the pedal is being pressed in normal operating state
+    cycles = 10 # Monitor for 10 cycles before letting go of the pedal
+    while bms5.state == 'normal_operation' and cycles != 0:
+        bms5.enter_normal_operation()
+        time.sleep(0.1)
+        # if there is no fault detected, assert that state is still normal operation
+        if bms5.fault_check():
+            if (bms5.state != 'fault_detected'):
+                print("Incorrect state: Test failed")
+                return
+        # if there is a fault detected, assert that state is now fault operating
+        else:
+            if (bms5.state != 'normal_operation'):
+                print("Incorrect state: Test failed")
+                return
+        cycles -= 1
+    
+    bms5.button_press = True
+    bms5.enter_normal_operation() # Simulate button press (go to sleep)
+
+    if (bms5.state != 'sleep'):
+        print("Incorrect state: Test failed")
+        return
+    
+    print("\nWe are currently in the sleep state\n")
+
+    bms5.charger_plugged_in = True # Simulate charger plugged in
+    bms5.enter_sleep()
+
+    if (bms5.state != 'charging'): # Check that we are in the charging state
+        print("Incorrect state: Test failed")
+        return
+    
+    while (bms5.state == 'charging'):
+        bms5.enter_charging()
+        time.sleep(1)
+    
+    if (bms5.state != 'sleep'): # Check that we are in the sleep state after soc is 100
+        print("Incorrect state: Test failed")
+        return
+    
+    time.sleep(0.2)
+    print("\nWe are fully charged and back in the sleep state")
+    time.sleep(0.5)
+    print("\nTest 5 Passed\n")
+    
+

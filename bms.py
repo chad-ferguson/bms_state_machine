@@ -85,7 +85,7 @@ class BMS():
         self.machine.add_transition(trigger='fully_charged', source='charging', dest='sleep')
 
         # 16) Transition from discharge to storage to deep sleep if SOC reaches 50%
-        self.machine.add_transition(trigger='soc_50%', source='discharge_to_storage', dest='deep_sleep')
+        self.machine.add_transition(trigger='soc_50', source='discharge_to_storage', dest='deep_sleep')
 
         
     def enter_deep_sleep(self):
@@ -135,7 +135,7 @@ class BMS():
         self.simulate_battery(proportion) # Update attributes based on "sensor readings"
         self.simulate_soc() # Simulate SOC
 
-        print(f"Voltage: {self.voltage}, Current: {self.current}, Temperature: {self.temp_voltage}, SOC: {self.soc}")
+        print(f"Voltage: {self.voltage}, Current: {self.current}, Temperature Voltage: {self.temp_voltage}, SOC: {self.soc}")
 
         if self.fault_check(): # If fault, transition to fault operating state
             self.fault_detected() # Trigger tranistion to fault operating
@@ -174,36 +174,42 @@ class BMS():
     def enter_sleep(self):
         print("System in sleep mode. OCV measurement ongoing.")
         # Low power state, occasional OCV checks (time doubles after each OCV measurement)
-        time_break = 1
+        # time_break = 0.5
         self.current = 0
         self.button_press = False
         self.pedal_press = False
-        while self.state == 'sleep':
-            time.sleep(time_break)
-            time_break = time_break * 2
-            self.simulate_ocv()
+        # while self.state == 'sleep':
+            # time.sleep(time_break)
+            # time_break = time_break * 2
+        self.simulate_ocv()
 
-            if self.button_press:
-                print("Button pressed. Transitioning to idle.")
-                self.button_pressed()  # Trigger the transition to idle
+        if self.button_press:
+            print("Button pressed. Transitioning to idle.")
+            self.button_pressed()  # Trigger the transition to idle
+        if self.charger_plugged_in:
+            print("Charger Plugged in: Transitioning to charging state")
+            self.charger_in()
 
     def enter_discharge_to_storage(self):
         print("Discharging battery to 50% for storage.")
         # Simulate discharge process
         while self.soc > 50:
-            self.soc -= 1
-            time.sleep(0.1)
-        self.soc_50%() # Transition to deep sleep
+            self.soc -= 0.5
+            print(f"SOC: {self.soc}")
+            time.sleep(0.2)
+        self.soc_50() # Transition to deep sleep
 
 
     def enter_charging(self):
         print("Charging battery.")
         # Simulate charging process (assumes safe charging, can add checking for charging faults)
         while self.soc < 100:
-            self.soc += 1
-            time.sleep(0.5)  # Simulate charging time
+            self.soc += 0.5
+            time.sleep(0.2)  # Simulate charging time
+            print(f"SOC: {self.soc}")
             if self.soc >= 100:
                 self.soc = 100
+                self.charger_plugged_in = False # Stimulate unplugging
                 self.fully_charged()  # Trigger transition when fully charged
 
     def fault_check(self):
